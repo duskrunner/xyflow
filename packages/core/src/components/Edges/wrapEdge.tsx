@@ -7,8 +7,7 @@ import { ARIA_EDGE_DESC_KEY } from '../A11yDescriptions';
 import { handlePointerDown } from '../Handle/handler';
 import { EdgeAnchor } from './EdgeAnchor';
 import { getMarkerId } from '../../utils/graph';
-import { getMouseHandler } from './utils';
-import { elementSelectionKeys } from '../../utils';
+import { dataToAttribute, elementSelectionKeys } from '../../utils';
 import type { EdgeProps, WrapEdgeProps, Connection } from '../../types';
 
 const alwaysValidConnection = () => true;
@@ -19,8 +18,6 @@ export default (EdgeComponent: ComponentType<EdgeProps>) => {
     className,
     type,
     data,
-    onClick,
-    onEdgeDoubleClick,
     selected,
     animated,
     label,
@@ -42,10 +39,6 @@ export default (EdgeComponent: ComponentType<EdgeProps>) => {
     hidden,
     sourceHandleId,
     targetHandleId,
-    onContextMenu,
-    onMouseEnter,
-    onMouseMove,
-    onMouseLeave,
     edgeUpdaterRadius,
     onEdgeUpdate,
     onEdgeUpdateStart,
@@ -70,36 +63,6 @@ export default (EdgeComponent: ComponentType<EdgeProps>) => {
     if (hidden) {
       return null;
     }
-
-    const onEdgeClick = (event: React.MouseEvent<SVGGElement, MouseEvent>): void => {
-      const { edges, addSelectedEdges, unselectNodesAndEdges, multiSelectionActive } = store.getState();
-      const edge = edges.find((e) => e.id === id);
-
-      if (!edge) {
-        return;
-      }
-
-      if (elementsSelectable) {
-        store.setState({ nodesSelectionActive: false });
-
-        if (edge.selected && multiSelectionActive) {
-          unselectNodesAndEdges({ nodes: [], edges: [edge] });
-          edgeRef.current?.blur();
-        } else {
-          addSelectedEdges([id]);
-        }
-      }
-
-      if (onClick) {
-        onClick(event, edge);
-      }
-    };
-
-    const onEdgeDoubleClickHandler = getMouseHandler(id, store.getState, onEdgeDoubleClick);
-    const onEdgeContextMenu = getMouseHandler(id, store.getState, onContextMenu);
-    const onEdgeMouseEnter = getMouseHandler(id, store.getState, onMouseEnter);
-    const onEdgeMouseMove = getMouseHandler(id, store.getState, onMouseMove);
-    const onEdgeMouseLeave = getMouseHandler(id, store.getState, onMouseLeave);
 
     const handleEdgeUpdater = (event: React.MouseEvent<SVGGElement, MouseEvent>, isSourceHandle: boolean) => {
       // avoid triggering edge updater if mouse btn is not left
@@ -148,7 +111,7 @@ export default (EdgeComponent: ComponentType<EdgeProps>) => {
     const onEdgeUpdaterMouseEnter = () => setUpdateHover(true);
     const onEdgeUpdaterMouseOut = () => setUpdateHover(false);
 
-    const inactive = !elementsSelectable && !onClick;
+    const inactive = !elementsSelectable;
 
     const onKeyDown = (event: KeyboardEvent) => {
       if (elementSelectionKeys.includes(event.key) && elementsSelectable) {
@@ -164,6 +127,9 @@ export default (EdgeComponent: ComponentType<EdgeProps>) => {
       }
     };
 
+    const edge = store.getState().edges.find((e) => e.id === id);
+    const edgeDataProps = dataToAttribute(edge, 'edge');
+
     return (
       <g
         className={cc([
@@ -172,12 +138,6 @@ export default (EdgeComponent: ComponentType<EdgeProps>) => {
           className,
           { selected, animated, inactive, updating: updateHover },
         ])}
-        onClick={onEdgeClick}
-        onDoubleClick={onEdgeDoubleClickHandler}
-        onContextMenu={onEdgeContextMenu}
-        onMouseEnter={onEdgeMouseEnter}
-        onMouseMove={onEdgeMouseMove}
-        onMouseLeave={onEdgeMouseLeave}
         onKeyDown={isFocusable ? onKeyDown : undefined}
         tabIndex={isFocusable ? 0 : undefined}
         role={isFocusable ? 'button' : 'img'}
@@ -185,6 +145,8 @@ export default (EdgeComponent: ComponentType<EdgeProps>) => {
         aria-label={ariaLabel === null ? undefined : ariaLabel ? ariaLabel : `Edge from ${source} to ${target}`}
         aria-describedby={isFocusable ? `${ARIA_EDGE_DESC_KEY}-${rfId}` : undefined}
         ref={edgeRef}
+        data-edgedata={edgeDataProps}
+        data-eltype="edge"
       >
         {!updating && (
           <EdgeComponent

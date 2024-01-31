@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, memo } from 'react';
-import type { ComponentType, MouseEvent, KeyboardEvent } from 'react';
+import type { ComponentType, KeyboardEvent } from 'react';
 import cc from 'classcat';
 
 import { useStoreApi } from '../../hooks/useStore';
@@ -7,8 +7,8 @@ import { Provider } from '../../contexts/NodeIdContext';
 import { ARIA_NODE_DESC_KEY } from '../A11yDescriptions';
 import useDrag from '../../hooks/useDrag';
 import useUpdateNodePositions from '../../hooks/useUpdateNodePositions';
-import { getMouseHandler, handleNodeClick } from './utils';
-import { elementSelectionKeys, isInputDOMNode } from '../../utils';
+import { handleNodeClick } from './utils';
+import { dataToAttribute, elementSelectionKeys, isInputDOMNode } from '../../utils';
 import type { NodeProps, WrapNodeProps, XYPosition } from '../../types';
 
 export const arrowKeyDiffs: Record<string, XYPosition> = {
@@ -28,12 +28,6 @@ export default (NodeComponent: ComponentType<NodeProps>) => {
     xPosOrigin,
     yPosOrigin,
     selected,
-    onClick,
-    onMouseEnter,
-    onMouseMove,
-    onMouseLeave,
-    onContextMenu,
-    onDoubleClick,
     style,
     className,
     isDraggable,
@@ -60,34 +54,8 @@ export default (NodeComponent: ComponentType<NodeProps>) => {
     const prevSourcePosition = useRef(sourcePosition);
     const prevTargetPosition = useRef(targetPosition);
     const prevType = useRef(type);
-    const hasPointerEvents = isSelectable || isDraggable || onClick || onMouseEnter || onMouseMove || onMouseLeave;
+    const hasPointerEvents = isSelectable || isDraggable;
     const updatePositions = useUpdateNodePositions();
-
-    const onMouseEnterHandler = getMouseHandler(id, store.getState, onMouseEnter);
-    const onMouseMoveHandler = getMouseHandler(id, store.getState, onMouseMove);
-    const onMouseLeaveHandler = getMouseHandler(id, store.getState, onMouseLeave);
-    const onContextMenuHandler = getMouseHandler(id, store.getState, onContextMenu);
-    const onDoubleClickHandler = getMouseHandler(id, store.getState, onDoubleClick);
-    const onSelectNodeHandler = (event: MouseEvent) => {
-      const { nodeDragThreshold } = store.getState();
-
-      if (isSelectable && (!selectNodesOnDrag || !isDraggable || nodeDragThreshold > 0)) {
-        // this handler gets called within the drag start event when selectNodesOnDrag=true
-        handleNodeClick({
-          id,
-          store,
-          nodeRef,
-        });
-      }
-
-      if (onClick) {
-        const node = store.getState().nodeInternals.get(id);
-
-        if (node) {
-          onClick(event, { ...node });
-        }
-      }
-    };
 
     const onKeyDown = (event: KeyboardEvent) => {
       if (isInputDOMNode(event)) {
@@ -166,6 +134,9 @@ export default (NodeComponent: ComponentType<NodeProps>) => {
       return null;
     }
 
+    const node = store.getState().nodeInternals.get(id);
+    const nodeDataProps = dataToAttribute(node, 'node');
+
     return (
       <div
         className={cc([
@@ -193,17 +164,13 @@ export default (NodeComponent: ComponentType<NodeProps>) => {
         }}
         data-id={id}
         data-testid={`rf__node-${id}`}
-        onMouseEnter={onMouseEnterHandler}
-        onMouseMove={onMouseMoveHandler}
-        onMouseLeave={onMouseLeaveHandler}
-        onContextMenu={onContextMenuHandler}
-        onClick={onSelectNodeHandler}
-        onDoubleClick={onDoubleClickHandler}
         onKeyDown={isFocusable ? onKeyDown : undefined}
         tabIndex={isFocusable ? 0 : undefined}
         role={isFocusable ? 'button' : undefined}
         aria-describedby={disableKeyboardA11y ? undefined : `${ARIA_NODE_DESC_KEY}-${rfId}`}
         aria-label={ariaLabel}
+        data-nodedata={nodeDataProps}
+        data-eltype="node"
       >
         <Provider value={id}>
           <NodeComponent

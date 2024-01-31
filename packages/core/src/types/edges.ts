@@ -70,8 +70,6 @@ export type DefaultEdgeOptions = Omit<
 export type EdgeMouseHandler = (event: ReactMouseEvent, edge: Edge) => void;
 
 export type WrapEdgeProps<T = any> = Omit<Edge<T>, 'sourceHandle' | 'targetHandle'> & {
-  onClick?: EdgeMouseHandler;
-  onEdgeDoubleClick?: EdgeMouseHandler;
   sourceHandleId?: string | null;
   targetHandleId?: string | null;
   sourceX: number;
@@ -82,10 +80,6 @@ export type WrapEdgeProps<T = any> = Omit<Edge<T>, 'sourceHandle' | 'targetHandl
   targetPosition: Position;
   elementsSelectable?: boolean;
   onEdgeUpdate?: OnEdgeUpdateFunc;
-  onContextMenu?: EdgeMouseHandler;
-  onMouseEnter?: EdgeMouseHandler;
-  onMouseMove?: EdgeMouseHandler;
-  onMouseLeave?: EdgeMouseHandler;
   edgeUpdaterRadius?: number;
   onEdgeUpdateStart?: (event: ReactMouseEvent, edge: Edge, handleType: HandleType) => void;
   onEdgeUpdateEnd?: (event: MouseEvent | TouchEvent, edge: Edge, handleType: HandleType) => void;

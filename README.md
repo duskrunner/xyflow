@@ -1,3 +1,7 @@
+# 🚨 Customized version of reactflow with improved events handling for preformance improvments
+
+### Reactflow has problom with preformance, when you render huge amount of nodes with event handlers. Event handlers were placed on every node and edge which is bad. This fork removes this problem.
+
 ![readme-header-dark](https://user-images.githubusercontent.com/3797215/156384064-08a889d6-73c0-4cbf-8ff3-28dc601d1f5f.svg#gh-dark-mode-only)
 ![readme-header](https://user-images.githubusercontent.com/3797215/156259138-fb9f59f8-52f2-474a-b78c-6570867e4ead.svg#gh-light-mode-only)
 

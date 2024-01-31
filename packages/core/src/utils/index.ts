@@ -30,6 +30,22 @@ const calcAutoPanVelocity = (value: number, min: number, max: number): number =>
   return 0;
 };
 
+export function dataToAttribute<T>(data: T, elType: string) {
+  const nodeDataProps: { [key: string]: T[keyof T] | string } = {};
+  type DataKey = keyof T;
+  let nodeKey: DataKey;
+  const nodeData = JSON.stringify(data);
+  for (nodeKey in data) {
+    if (typeof data[nodeKey] == 'object' && data[nodeKey] !== null) {
+      nodeDataProps[`data-${String(nodeKey)}`] = JSON.stringify(data[nodeKey]);
+    } else {
+      nodeDataProps[`data-${String(nodeKey)}`] = data[nodeKey];
+    }
+    nodeDataProps[`data-elType`] = elType;
+  }
+  return nodeData;
+}
+
 export const calcAutoPan = (pos: XYPosition, bounds: Dimensions): number[] => {
   const xMovement = calcAutoPanVelocity(pos.x, 35, bounds.width - 35) * 20;
   const yMovement = calcAutoPanVelocity(pos.y, 35, bounds.height - 35) * 20;
