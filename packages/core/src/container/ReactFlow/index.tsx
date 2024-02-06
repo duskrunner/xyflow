@@ -1,4 +1,4 @@
-import React, { forwardRef, type CSSProperties, useCallback } from 'react';
+import React, { forwardRef, type CSSProperties, useCallback, useState } from 'react';
 import cc from 'classcat';
 
 import Attribution from '../../components/Attribution';
@@ -13,7 +13,7 @@ import A11yDescriptions from '../../components/A11yDescriptions';
 import GraphView from '../GraphView';
 import Wrapper from './Wrapper';
 import { infiniteExtent } from '../../store/initialState';
-import { ConnectionLineType, ConnectionMode, PanOnScrollMode, SelectionMode } from '../../types';
+import { ConnectionLineType, ConnectionMode, Edge, PanOnScrollMode, SelectionMode, Node } from '../../types';
 import type {
   EdgeMouseHandler,
   EdgeTypes,
@@ -53,47 +53,43 @@ const wrapperStyle: CSSProperties = {
   zIndex: 0,
 };
 
-function findNodeOrEdge(node: HTMLElement, listeningEl: HTMLElement) {
+const findNodeOrEdge = (node: HTMLElement, listeningEl: HTMLElement): HTMLElement | null => {
   const elType = node?.dataset?.eltype;
-  console.log(elType);
   if (elType) return node;
-  console.log(node.parentElement);
 
   if (!node.parentElement || node.parentElement === listeningEl) return null;
 
   return findNodeOrEdge(node.parentElement, listeningEl);
-}
+};
 
-function eventHandlersDecorator(
+const eventHandlersDecorator = (
   nodeCallback: NodeMouseHandler | undefined,
   edgeCallback: EdgeMouseHandler | undefined
-) {
+) => {
   const decoratedEventHandler = (event: React.MouseEvent<Element, MouseEvent>) => {
     if (!nodeCallback && !edgeCallback) {
       return;
     }
-
     const data = findNodeOrEdge(event.target, event.currentTarget);
-    console.log('DATA', data);
+
     if (!data) return;
+
     const elType = data?.dataset?.eltype;
 
     if (elType == 'node' && nodeCallback !== undefined) {
       if (data.dataset.nodedata) {
         const node = JSON.parse(data.dataset.nodedata);
-        console.log('NODE', node);
         nodeCallback(event, node);
       }
     } else if (elType == 'edge' && edgeCallback !== undefined) {
       if (data.dataset.edgedata) {
         const edge = JSON.parse(data.dataset.edgedata);
-        console.log('EDGE:', edge);
         edgeCallback(event, edge);
       }
     }
   };
   return decoratedEventHandler;
-}
+};
 
 const ReactFlow = forwardRef<ReactFlowRefType, ReactFlowProps>(
   (
@@ -213,16 +209,70 @@ const ReactFlow = forwardRef<ReactFlowRefType, ReactFlowProps>(
     ref
   ) => {
     const rfId = id || '1';
+    const [currentHovered, setCurrentHovered] = useState<{ elType: null | string; el: null | Node | Edge }>({
+      elType: null,
+      el: null,
+    });
+
+    const hoverEventHandlersDecorator = useCallback(
+      (
+        nodeEnterCallback: NodeMouseHandler | undefined,
+        edgeEnterCallback: EdgeMouseHandler | undefined,
+        nodeLeaveCallback: NodeMouseHandler | undefined,
+        edgeLeaveCallback: EdgeMouseHandler | undefined
+      ) => {
+        const decoratedEventHandler = (event: React.MouseEvent<Element, MouseEvent>) => {
+          if (!nodeEnterCallback && !edgeEnterCallback) {
+            return;
+          }
+          const data = findNodeOrEdge(event.target, event.currentTarget);
+
+          if (!data) {
+            if (edgeLeaveCallback && currentHovered.elType == 'edge') {
+              edgeLeaveCallback(event, currentHovered.el as Edge);
+              setCurrentHovered({ elType: null, el: null });
+            } else if (nodeLeaveCallback && currentHovered.elType == 'node') {
+              nodeLeaveCallback(event, currentHovered.el as Node);
+              setCurrentHovered({ elType: null, el: null });
+            }
+            return;
+          }
+
+          const elType = data?.dataset?.eltype;
+          if (elType == 'node' && nodeEnterCallback !== undefined) {
+            if (data.dataset.nodedata) {
+              const node = JSON.parse(data.dataset.nodedata);
+              if (elType !== currentHovered.elType && edgeLeaveCallback && currentHovered.el) {
+                edgeLeaveCallback(event, currentHovered.el as Edge);
+              } else if (currentHovered.el && node.id !== currentHovered?.el?.id && nodeLeaveCallback) {
+                nodeLeaveCallback(event, currentHovered.el as Node);
+              }
+              setCurrentHovered({ elType, el: node });
+              nodeEnterCallback(event, node);
+            }
+          } else if (elType == 'edge' && edgeEnterCallback !== undefined) {
+            if (data.dataset.edgedata) {
+              const edge = JSON.parse(data.dataset.edgedata);
+              if (currentHovered.el && elType !== currentHovered.elType && nodeLeaveCallback) {
+                nodeLeaveCallback(event, currentHovered.el as Node);
+              } else if (currentHovered.el && edge.id !== currentHovered?.el?.id && edgeLeaveCallback) {
+                edgeLeaveCallback(event, currentHovered.el as Edge);
+              }
+              setCurrentHovered({ elType, el: edge });
+              edgeEnterCallback(event, edge);
+            }
+          }
+        };
+        return decoratedEventHandler;
+      },
+      [setCurrentHovered, currentHovered]
+    );
 
     const onElClick = useCallback(eventHandlersDecorator(onNodeClick, onEdgeClick), [onNodeClick, onEdgeClick]);
-    const onElMouseEnter = useCallback(eventHandlersDecorator(onNodeMouseEnter, onEdgeMouseEnter), [
-      onNodeMouseEnter,
-      onEdgeMouseEnter,
-    ]);
-    const onElMouseLeave = useCallback(eventHandlersDecorator(onNodeMouseLeave, onEdgeMouseLeave), [
-      onNodeMouseLeave,
-      onEdgeMouseLeave,
-    ]);
+    const onElMouseEnter = useCallback(
+      hoverEventHandlersDecorator(onNodeMouseEnter, onEdgeMouseEnter, onNodeMouseLeave, onEdgeMouseLeave),
+      [onNodeMouseEnter, onEdgeMouseEnter]
+    );
     const onElDoubleClick = useCallback(eventHandlersDecorator(onNodeDoubleClick, onEdgeDoubleClick), [
       onNodeDoubleClick,
       onEdgeDoubleClick,
@@ -249,7 +299,6 @@ const ReactFlow = forwardRef<ReactFlowRefType, ReactFlowProps>(
         onMouseMove={onElMouseMove}
         onClick={onElClick}
         onMouseOver={onElMouseEnter}
-        onMouseOut={onElMouseLeave}
       >
         <Wrapper>
           <GraphView
@@ -294,11 +343,6 @@ const ReactFlow = forwardRef<ReactFlowRefType, ReactFlowProps>(
             onSelectionStart={onSelectionStart}
             onSelectionEnd={onSelectionEnd}
             onEdgeUpdate={onEdgeUpdate}
-            // onEdgeContextMenu={onEdgeContextMenu}
-            // onEdgeDoubleClick={onEdgeDoubleClick}
-            // onEdgeMouseEnter={onEdgeMouseEnter}
-            // onEdgeMouseMove={onEdgeMouseMove}
-            // onEdgeMouseLeave={onEdgeMouseLeave}
             onEdgeUpdateStart={onEdgeUpdateStart}
             onEdgeUpdateEnd={onEdgeUpdateEnd}
             edgeUpdaterRadius={edgeUpdaterRadius}
