@@ -1,7 +1,6 @@
 import React, { forwardRef, type CSSProperties, useCallback, useState } from 'react';
 import cc from 'classcat';
 
-import Attribution from '../../components/Attribution';
 import { BezierEdge, SmoothStepEdge, StepEdge, StraightEdge, SimpleBezierEdge } from '../../components/Edges';
 import DefaultNode from '../../components/Nodes/DefaultNode';
 import InputNode from '../../components/Nodes/InputNode';
@@ -190,7 +189,6 @@ const ReactFlow = forwardRef<ReactFlowRefType, ReactFlowProps>(
       fitView = false,
       fitViewOptions,
       connectOnClick = true,
-      attributionPosition,
       proOptions,
       defaultEdgeOptions,
       elevateNodesOnSelect = true,
@@ -204,6 +202,7 @@ const ReactFlow = forwardRef<ReactFlowRefType, ReactFlowProps>(
       style,
       id,
       nodeDragThreshold,
+      onClick,
       ...rest
     },
     ref
@@ -269,6 +268,12 @@ const ReactFlow = forwardRef<ReactFlowRefType, ReactFlowProps>(
     );
 
     const onElClick = useCallback(eventHandlersDecorator(onNodeClick, onEdgeClick), [onNodeClick, onEdgeClick]);
+    const onClk = useCallback((event: React.MouseEvent<HTMLDivElement, MouseEvent>) => {
+      if (onClick) {
+        onClick(event)
+      }
+      onElClick(event)
+    }, [onClick, onElClick])
     const onElMouseEnter = useCallback(
       hoverEventHandlersDecorator(onNodeMouseEnter, onEdgeMouseEnter, onNodeMouseLeave, onEdgeMouseLeave),
       [onNodeMouseEnter, onEdgeMouseEnter]
@@ -297,7 +302,7 @@ const ReactFlow = forwardRef<ReactFlowRefType, ReactFlowProps>(
         onDoubleClick={onElDoubleClick}
         onContextMenu={onElContextMenu}
         onMouseMove={onElMouseMove}
-        onClick={onElClick}
+        onClick={onClk}
         onMouseOver={onElMouseEnter}
       >
         <Wrapper>
@@ -406,7 +411,6 @@ const ReactFlow = forwardRef<ReactFlowRefType, ReactFlowProps>(
           />
           <SelectionListener onSelectionChange={onSelectionChange} />
           {children}
-          <Attribution proOptions={proOptions} position={attributionPosition} />
           <A11yDescriptions rfId={rfId} disableKeyboardA11y={disableKeyboardA11y} />
         </Wrapper>
       </div>
@@ -414,6 +418,6 @@ const ReactFlow = forwardRef<ReactFlowRefType, ReactFlowProps>(
   }
 );
 
-ReactFlow.displayName = 'ReactFlow';
+ReactFlow.displayName = 'kl-reactflow';
 
 export default ReactFlow;
