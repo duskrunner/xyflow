@@ -268,12 +268,15 @@ const ReactFlow = forwardRef<ReactFlowRefType, ReactFlowProps>(
     );
 
     const onElClick = useCallback(eventHandlersDecorator(onNodeClick, onEdgeClick), [onNodeClick, onEdgeClick]);
-    const onClk = useCallback((event: React.MouseEvent<HTMLDivElement, MouseEvent>) => {
-      if (onClick) {
-        onClick(event)
-      }
-      onElClick(event)
-    }, [onClick, onElClick])
+    const onClk = useCallback(
+      (event: React.MouseEvent<HTMLDivElement, MouseEvent>) => {
+        if (onClick) {
+          onClick(event);
+        }
+        onElClick(event);
+      },
+      [onClick, onElClick]
+    );
     const onElMouseEnter = useCallback(
       hoverEventHandlersDecorator(onNodeMouseEnter, onEdgeMouseEnter, onNodeMouseLeave, onEdgeMouseLeave),
       [onNodeMouseEnter, onEdgeMouseEnter]
@@ -418,6 +421,6 @@ const ReactFlow = forwardRef<ReactFlowRefType, ReactFlowProps>(
   }
 );
 
-ReactFlow.displayName = 'kl-reactflow';
+ReactFlow.displayName = 'ReactFlow';
 
 export default ReactFlow;
